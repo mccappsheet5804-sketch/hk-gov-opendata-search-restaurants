@@ -41,6 +41,30 @@
             map.addLayer(drawnItems);
             map.addLayer(userItem);
 
+            window.__gc__ = {
+                ICON: {
+                    USER: L.icon({
+                        iconUrl: `https://img.icons8.com/?size=100&id=OZZ2pTwn45ie&format=png&color=000000`,
+                        iconSize: [40, 40], // Size of the icon [width, height]
+                        iconAnchor: [20, 0], // Point of the icon which will correspond to marker's location
+                    }),
+                    普通食肆: L.icon({
+                        iconUrl: `https://img.icons8.com/?size=100&id=NTPjDyGAVp1r&format=png&color=000000`,
+                        iconSize: [40, 40], // Size of the icon [width, height]
+                        iconAnchor: [20, 0], // Point of the icon which will correspond to marker's location
+                    }),
+                    小食食肆: L.icon({
+                        iconUrl: `https://img.icons8.com/?size=100&id=13303&format=png&color=000000`,
+                        iconSize: [40, 40], // Size of the icon [width, height]
+                        iconAnchor: [20, 0], // Point of the icon which will correspond to marker's location
+                    }),
+                    水上食肆牌照: L.icon({
+                        iconUrl: `https://img.icons8.com/?size=100&id=WNua743kNsXz&format=png&color=000000`,
+                        iconSize: [40, 40], // Size of the icon [width, height]
+                        iconAnchor: [20, 0], // Point of the icon which will correspond to marker's location
+                    }),
+                }
+            };
             window.__gv__.GPS = await getCurrentLocationByGPS();
 
             // Get current location using GPS
@@ -55,16 +79,10 @@
                             window.__gv__.GPS = position.coords;
                             const [lat, lng] = [window.__gv__.GPS.latitude, window.__gv__.GPS.longitude];
                             map.setView([window.__gv__.GPS.latitude, window.__gv__.GPS.longitude], 17);
-                            // Create a custom icon
-                            const userIcon = L.icon({
-                                iconUrl: `https://img.icons8.com/?size=100&id=OZZ2pTwn45ie&format=png&color=000000`,
-                                iconSize: [40, 40], // Size of the icon [width, height]
-                                iconAnchor: [20, 0], // Point of the icon which will correspond to marker's location
-                            });
 
                             // Create the marker with the custom icon
                             map.removeControl(userItem);
-                            const marker = L.marker([lat, lng], { icon: userIcon }).addTo(userItem);
+                            const marker = L.marker([lat, lng], { icon: window.__gc__.ICON.USER }).addTo(userItem);
                             map.addLayer(userItem);
                             resolve(position.coords);
                         },
@@ -140,8 +158,9 @@
                 const lat = coords[1]; // Latitude
                 const lng = coords[0]; // Longitude
 
-                const marker = L.marker([lat, lng]).addTo(drawnItems);
+                // const marker = L.marker([lat, lng]).addTo(drawnItems);
                 const properties = feature.properties;
+                const marker = L.marker([lat, lng], { icon: window.__gc__.ICON[properties.NAME_TC] }).addTo(drawnItems);
 
                 // Prepare content for the popup
                 const GetItem = (en, tc) => en !== tc ? `${tc} / ${en}` : en;
