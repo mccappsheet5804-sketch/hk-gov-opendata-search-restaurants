@@ -14,10 +14,10 @@
 <body>
     <div id="map"></div>
     <div class="control-panel mb-2">
-        <button class="btn btn-success" id="refreshCurrentLocationByGPS">Refresh</button>
+        <button class="btn btn-success" id="refreshCurrentLocationByGPS">更新「我的位置」</button>
         <hr />
-        <button class="btn btn-success" id="drawRectBtn">Draw Rectangle</button>
-        <button class="btn btn-danger" id="clearBtn" hidden>Clear Rectangles</button>
+        <button class="btn btn-success" id="drawRectBtn">選擇「範圍」</button>
+        <button class="btn btn-danger" id="clearBtn" hidden>清除「範圍」</button>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
@@ -107,6 +107,8 @@
                     const layer = e.layer;
                     drawnItems.addLayer(layer);
                     document.getElementById('clearBtn').hidden = false;
+                    document.getElementById('clearBtn').disabled = true;
+                    document.getElementById('drawRectBtn').hidden = true;
 
                     // Retrieve rectangle corners
                     const _northEast = layer.getBounds().getNorthEast();
@@ -120,7 +122,7 @@
                     // Plot the markers on the map
                     jdata.features.forEach(plotMarker);
 
-                    document.getElementById('drawRectBtn').hidden = true;
+                    document.getElementById('clearBtn').disabled = false;
                 });
 
                 // Clear button functionality
