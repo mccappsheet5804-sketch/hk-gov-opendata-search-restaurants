@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HK Government OpenData - Restaurant Search</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet-draw@1.0.4/dist/leaflet.draw.min.css" />
+    <link rel="stylesheet" href="index.css" />
+</head>
+
+<body>
+    <div id="map"></div>
+    <div class="control-panel">
+        <button class="btn btn-success m-0" id="drawRectBtn">Draw Rectangle</button>
+        <button class="btn btn-danger m-0" id="clearBtn" hidden>Clear Rectangles</button>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.js"></script>
+    <script>
+        // Initialize map
+        const map = L.map(
+            'map',
+            {
+                zoomControl: false
+            }
+        ).setView([22.3193, 114.1694], 11);
+        L.control.zoom({
+            position: 'bottomleft'
+        }).addTo(map);
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors',
+            maxZoom: 19
+        }).addTo(map);
+
+        // Prepare container for drawn items
+        const drawnItems = new L.FeatureGroup();
+        map.addLayer(drawnItems);
+
+        // Function to initialize drawing controls
+        function initDraw() {
+            const drawControl = new L.Control.Draw({
+                draw: {
+                    rectangle: true,
+                    polygon: false,
+                    polyline: false,
+                    circle: false,
+                    marker: false,
+                    circlemarker: false
+                },
+            });
+
+            // Button to toggle drawing mode
+            document.getElementById('drawRectBtn').addEventListener('click', () => {
+                map.addControl(drawControl);
+            });
+
+            // Handle drawn items
+            map.on('draw:created', async (e) => {
+                document.getElementById('clearBtn').disabled = true;
+                document.getElementById('clearBtn').hidden = false;
+                const layer = e.layer;
+                drawnItems.addLayer(layer);
+
+                // Retrieve the corners of the drawn rectangle
+                const _northEast = layer._bounds._northEast;
+                const _southWest = layer._bounds._southWest;
+
+                const url = `https://portal.csdi.gov.hk/server/services/common/fehd_rcd_1630036390312_58893/MapServer/WFSServer?service=wfs&request=GetFeature&typenames=FEHD_RL&outputFormat=geojson&maxFeatures=100&srsName=EPSG:4326&filter=<Filter><Intersects><PropertyName>SHAPE</PropertyName><gml:Envelope srsName='EPSG:4326'><gml:lowerCorner>${_southWest.lat} ${_southWest.lng}</gml:lowerCorner><gml:upperCorner>${_northEast.lat} ${_northEast.lng}</gml:upperCorner></gml:Envelope></Intersects></Filter>`;
+                const response = await fetch(url);
+                const jdata = await response.json();
+                // Plot the markers on the map
+                jdata.features.forEach(feature => {
+                    const coords = feature.geometry.coordinates;
+                    const lat = coords[1]; // Latitude
+                    const lng = coords[0]; // Longitude
+
+                    // Create a marker
+                    const marker = L.marker([lat, lng]).addTo(drawnItems);
+
+                    // Prepare content for the popup
+                    const addressEn = feature.properties.ADDRESS_EN || 'N/A';
+                    const addressTc = feature.properties.ADDRESS_TC || 'N/A';
+                    const datasetEn = feature.properties.DATASET_EN || 'N/A';
+                    const datasetTc = feature.properties.DATASET_TC || 'N/A';
+                    const nameEn = feature.properties.NAME_EN || 'N/A';
+                    const nameTc = feature.properties.NAME_TC || 'N/A';
+                    const nsearch03En = feature.properties.NSEARCH03_EN || 'N/A';
+                    const nsearch03Tc = feature.properties.NSEARCH03_TC || 'N/A';
+                    const nsearch05En = feature.properties.NSEARCH05_EN || 'N/A';
+                    const nsearch05Tc = feature.properties.NSEARCH05_TC || 'N/A';
+
+                    const GetItem = (en, tc) => en !== tc ? `${tc} / ${en}` : en;
+                    // Create a popup with information
+                    const popupContent = `
+                        <div class="d-flex flex-column">
+                            <div>
+                                <b>商店名稱：</b>
+                                ${GetItem(nsearch03En, nsearch03Tc)}
+                            </div>
+                            <div class="d-flex justify-content-center align-items-center">
+                                <hr class="w-75"/>
+                            </div>
+                            <b>地址：</b>
+                            <ul>
+                                <li>${addressTc}</li>
+                                <li>${addressEn}</li>
+                            </ul>
+                            <b>牌照：</b>
+                            <ul>
+                                <li>${nameEn} (${nameTc})</li>
+                                <li>${datasetEn} (${datasetTc})</li>
+                            </ul>
+                        </div>
+                        <small class="text-success fst-italic">更新日期時間：${nsearch05En}</small>
+                    `;
+
+                    // Bind the popup to the marker
+                    marker.bindPopup(popupContent);
+
+                    // Add click event to show the popup
+                    marker.on('click', () => {
+                        marker.openPopup();
+                    });
+                });
+
+                document.getElementById('drawRectBtn').hidden = true;
+                document.getElementById('clearBtn').disabled = false;
+            });
+
+            // Add event listener to clear button
+            document.getElementById('clearBtn').addEventListener(
+                'click',
+                () => {
+                    drawnItems.clearLayers();
+                    document.getElementById('drawRectBtn').hidden = false;
+                    document.getElementById('clearBtn').hidden = true;
+                    map.removeControl(drawControl);
+                    // TODO: Clear all markers drawn
+                }
+            );
+        }
+
+        // Load Leaflet.draw script and initialize it
+        const script = document.createElement('script');
+        script.src = 'https://cdn.jsdelivr.net/npm/leaflet-draw@1.0.4/dist/leaflet.draw.min.js';
+        script.onload = () => {
+            initDraw();
+        };
+        script.onerror = () => {
+            console.error('Failed to load Leaflet.draw script.');
+        };
+        document.body.appendChild(script);
+    </script>
+</body>
+
+</html>
